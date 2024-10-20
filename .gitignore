@@ -1,0 +1,71 @@
+# Byte-compiled files
+__pycache__/
+*.py[cod]
+
+# Distribution / packaging
+.Python
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+*.egg-info/
+dist/
+build/
+bin/
+lib/
+include/
+/lib64/*
+
+# IDEs and editors
+.vscode/
+.idea/
+*.swp
+*.swo
+*.sublime-project
+*.sublime-workspace
+
+# Logs
+*.log
+
+# Test results
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+*.egg
+*.egg-info/
+*.manifest
+*.spec
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# Python virtual environments
+.venv/
+venv/
+ENV/
+env/
+*.egg-info/
+dist/
+build/
+venv/lib64/
+
+
+# Other files
+*.DS_Store
+*.bak
+*.tmp
+*.orig
+*.pid
+*.seed
+*.sqlite3
+*.db
+*.db-journal
+*.pdb
+*.pyo
+*.pyd
+*.egg-info/
+*.egg
+*.whl
+
