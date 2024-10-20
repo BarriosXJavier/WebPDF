@@ -84,10 +84,10 @@ To make the webpdf.py script available globally so that you can run it from any 
 
 ### Linux/macOS
 
-Move the script to a directory that is already in your PATH or create a symbolic link:
+Copy the script to a directory that is already in your PATH or create a symbolic link:
 
 ```bash
-sudo mv webpdf.py /usr/local/bin/webpdf
+sudo cp webpdf.py /usr/local/bin/webpdf
 ```
 
 Alternatively, create a symlink:
