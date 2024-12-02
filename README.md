@@ -1,4 +1,4 @@
-WebPDF
+# WebPDF
 
 Sometimes, you come across a webpage that is so good you have to save it for later :) That's exactly why I created this script.
 
@@ -12,8 +12,6 @@ WebPDF is a Python script that provides a simple interface to convert web pages 
 - [Add to PATH](#add-to-path)
 - [Usage](#usage)
 - [Examples](#examples)
-- [Notes](#notes)
-- [Progress Updates](#progress-updates)
 
 ## Features
 
@@ -44,7 +42,7 @@ Additionally, you need to have wkhtmltopdf installed on your system. You can ins
 ### For Ubuntu/Debian
 
 ```bash
-sudo apt-get install wkhtmltopdf
+sudo apt-get install python3-wkhtmltopdf
 ```
 
 ### For macOS
@@ -71,7 +69,7 @@ cd webpdf
 On Linux or macOS, you'll need to make the script executable by running:
 
 ```bash
-chmod +x webpdf.py
+chmod u+x webpdf.py
 ```
 
 ### Step 3: Install Dependencies
@@ -156,8 +154,3 @@ webpdf <https://www.example.com>
 ```bash
 webpdf local_file.html
 ```
-
-## Notes
-
-- The script will automatically check if pdfkit is installed and attempt to install it via pipx if not present. If pipx is not available, it will abort and notify you.
-- The script will check if wkhtmltopdf is installed and provide instructions to install it if missing.

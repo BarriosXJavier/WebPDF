@@ -3,112 +3,212 @@
 import sys
 import os
 import argparse
-import subprocess
 import platform
 import shutil
-
-SUCCESS = "\033[92m✔\033[0m"  # Green checkmark
-FAILURE = "\033[91m✘\033[0m"  # Red cross
-INFO = "\033[94mℹ\033[0m"     # Blue info symbol
-
-
-def print_status(message, status):
-    print(f"{message} {status}")
+import subprocess
+import requests
+import pdfkit
+from tqdm.auto import tqdm
 
 
-def check_dependencies():
-    print(f"{INFO} Checking dependencies...")
-    try:
-        import pdfkit
-        print_status("pdfkit is installed", SUCCESS)
-    except ImportError:
-        print_status("pdfkit is not installed", FAILURE)
-        if shutil.which("pipx"):
-            print(f"{INFO} Attempting to install pdfkit via pipx...")
-            subprocess.check_call(["pipx", "install", "pdfkit"])
-            print_status("pdfkit installation complete", SUCCESS)
-            import pdfkit
-        else:
-            print_status("pipx is not installed", FAILURE)
-            print(f"{INFO} pipx is required to install dependencies. Aborting.")
+class DependencyChecker:
+    AVAILABLE = "\033[92m✓\033[0m"
+    MISSING = "\033[91m✗\033[0m"
+    WARN = "\033[93m!\033[0m"
+
+    @classmethod
+    def check_dependencies(cls):
+        deps = {
+            "wkhtmltopdf": cls._check_wkhtmltopdf(),
+            "python3": cls._check_python(),
+            "pip": cls._check_pip(),
+            "tqdm": cls._check_tqdm(),
+            "pdfkit": cls._check_pdfkit()
+        }
+
+        print("\nDependency Check:")
+        for dep, status in deps.items():
+            print(f"{dep}: {status}")
+
+        if any(status == cls.MISSING for status in deps.values()):
+            print("\nMissing Dependencies:")
+            cls._print_installation_guide(deps)
             sys.exit(1)
 
+    @classmethod
+    def _check_wkhtmltopdf(cls):
+        return cls.AVAILABLE if shutil.which("wkhtmltopdf") else cls.MISSING
 
-def get_wkhtmltopdf_path():
-    system = platform.system().lower()
-    if system == "windows":
-        return r"C:\Program Files\wkhtmltopdf\bin\wkhtmltopdf.exe"
-    elif system == "darwin":  # macOS
-        return "/usr/local/bin/wkhtmltopdf"
-    else:  # Linux and others
-        return "/usr/bin/wkhtmltopdf"
+    @classmethod
+    def _check_python(cls):
+        try:
+            subprocess.run(["python3", "--version"],
+                           capture_output=True, text=True)
+            return cls.AVAILABLE
+        except FileNotFoundError:
+            return cls.MISSING
+
+    @classmethod
+    def _check_pip(cls):
+        try:
+            subprocess.run(["pip3", "--version"],
+                           capture_output=True, text=True)
+            return cls.AVAILABLE
+        except FileNotFoundError:
+            return cls.MISSING
+
+    @classmethod
+    def _check_tqdm(cls):
+        try:
+            import tqdm
+            return cls.AVAILABLE
+        except ImportError:
+            return cls.MISSING
+
+    @classmethod
+    def _check_pdfkit(cls):
+        try:
+            import pdfkit
+            return cls.AVAILABLE
+        except ImportError:
+            return cls.MISSING
+
+    @classmethod
+    def _print_installation_guide(cls, deps):
+        system = platform.system().lower()
+
+        if deps["wkhtmltopdf"] == cls.MISSING:
+            print(f"\n{cls.WARN} Install wkhtmltopdf:")
+            if system == "windows":
+                print("  Download from: https://wkhtmltopdf.org/downloads.html")
+            elif system == "darwin":
+                print("  Run: brew install wkhtmltopdf")
+            else:
+                print("  Run: sudo apt-get install wkhtmltopdf")
+
+        if any(deps[lib] == cls.MISSING for lib in ["pip", "tqdm", "pdfkit"]):
+            print(f"\n{cls.WARN} Python Dependencies:")
+            print("  Run: pip3 install tqdm pdfkit")
 
 
-def install_wkhtmltopdf():
-    system = platform.system().lower()
-    print_status("wkhtmltopdf is not installed", FAILURE)
-    print(f"{INFO} Please install wkhtmltopdf manually:")
-    if system == "windows":
-        print("Download and install from: https://wkhtmltopdf.org/downloads.html")
-    elif system == "darwin":  # macOS
-        print("Run: brew install wkhtmltopdf")
-    else:  # Linux and others
-        print("Run: sudo apt-get install wkhtmltopdf")
-    print(f"{INFO} After installation, rerun this script.")
-    sys.exit(1)
+class WebPDFConverter:
+    SUCCESS = "\033[92m✔\033[0m"
+    FAILURE = "\033[91m✘\033[0m"
 
+    @staticmethod
+    def check_url_connection(url):
+        try:
+            response = requests.get(url, timeout=5)
+            if response.status_code >= 400:
+                raise Exception(f"Received HTTP {
+                                response.status_code} from the server.")
+            print(f"Connection Test: URL is reachable {
+                  WebPDFConverter.SUCCESS}")
+        except Exception as e:
+            print(f"Connection Test: Warning - {e} {WebPDFConverter.FAILURE}")
+            print("Proceeding with the conversion. Ensure the URL is valid.")
 
-def save_to_pdf(url, output_pdf, wkhtmltopdf_path):
-    try:
-        import pdfkit
-        config = pdfkit.configuration(wkhtmltopdf=wkhtmltopdf_path)
-        options = {'quiet': ''}
+    @staticmethod
+    def detect_javascript(url):
+        try:
+            response = requests.get(url, timeout=5)
+            if "<script" in response.text:
+                return True
+        except Exception as e:
+            print(
+                f"JavaScript Detection: Warning - {e} {WebPDFConverter.FAILURE}")
+        return False
 
-        if url.startswith(("http://", "https://")):
-            print(f"{INFO} Converting webpage: {url} to PDF...")
-            pdfkit.from_url(url, output_pdf,
-                            configuration=config, options=options)
-        elif os.path.isfile(url):
-            print(f"{INFO} Converting local file: {url} to PDF...")
-            pdfkit.from_file(
-                url, output_pdf, configuration=config, options=options)
+    @classmethod
+    def convert_to_pdf(cls, url, output_pdf):
+        try:
+            print("Converting to PDF...", end=' ', flush=True)
+            options = {
+                'enable-javascript': None,
+                'javascript-delay': 10000,
+                'no-stop-slow-scripts': None
+            }
+
+            if cls.detect_javascript(url):
+                options['javascript-delay'] = 15000
+                print(f"\nJavaScript detected. Increasing delay to {
+                      options['javascript-delay']} ms.")
+
+            pdfkit.from_url(url, output_pdf, options=options)
+            cls._print_status(f"Success! PDF saved to: {
+                              output_pdf}", cls.SUCCESS)
+
+        except Exception as e:
+            print(f"\bError {cls.FAILURE}")
+            cls._print_status(f"Error: {e}", cls.FAILURE)
+            sys.exit(1)
+
+    @staticmethod
+    def _print_status(message, status):
+        print(f"{message} {status}")
+
+    @staticmethod
+    def generate_output_path(input_path, output_filename=None):
+        def validate_filename(filename):
+            safe_filename = ''.join(
+                c for c in filename if c.isalnum() or c in ('-', '_', '.'))
+            if not safe_filename or set(safe_filename) <= {'.'}:
+                raise ValueError("Invalid filename")
+            return safe_filename
+
+        def create_directory(path):
+            try:
+                os.makedirs(path, exist_ok=True)
+                print(f"Directory created: {path}")
+            except PermissionError:
+                print(f"Error: No permission to create directory {path}")
+                sys.exit(1)
+            except Exception as e:
+                print(f"Error creating directory: {e}")
+                sys.exit(1)
+
+        save_dir = os.path.expanduser("~/Downloads/WebPDFs")
+        if not os.path.exists(save_dir):
+            create_directory(save_dir)
+
+        if output_filename:
+            output_filename = input_path.split("//")[-1].split("/")[0] if input_path.startswith(
+                ("http://", "https://")) else os.path.splitext(os.path.basename(input_path))[0]
+            output_filename += '.pdf'
+            output_path = os.path.join(save_dir, output_filename)
         else:
-            raise ValueError("The URL is not valid or the file was not found.")
-        print_status(f"Success! PDF saved to: {output_pdf}", SUCCESS)
-    except Exception as e:
-        print_status(f"Error: {e}", FAILURE)
-        sys.exit(1)
+            output_filename = input_path.split("//")[-1].split("/")[0] if input_path.startswith(
+                ("http://", "https://")) else os.path.splitext(os.path.basename(input_path))[0]
+            output_filename += '.pdf'
+            output_path = os.path.join(save_dir, output_filename)
+
+        try:
+            validate_filename(os.path.basename(output_path))
+        except ValueError:
+            print("Error: Invalid filename")
+            sys.exit(1)
+
+        base, ext = os.path.splitext(output_path)
+        counter = 1
+        while os.path.exists(output_path):
+            output_path = f"{base}({counter}){ext}"
+            counter += 1
+
+        print(f"Generated output path: {output_path}")
+        return output_path
 
 
 def main():
-    parser = argparse.ArgumentParser(
-        description="Save a webpage or HTML file as a PDF.")
-    parser.add_argument("input", help="URL or path to the local HTML file")
+    DependencyChecker.check_dependencies()
+    parser = argparse.ArgumentParser(description="Save a webpage as a PDF.")
+    parser.add_argument("input", help="URL or path to a local HTML file")
     parser.add_argument(
-        "--output", help="Output directory (default: ~/Downloads/WebPDFs)", default=None)
+        "-o", "--output", help="Optional output filename or directory", default=None)
     args = parser.parse_args()
-
-    check_dependencies()
-
-    wkhtmltopdf_path = get_wkhtmltopdf_path()
-    if not os.path.exists(wkhtmltopdf_path):
-        install_wkhtmltopdf()
-
-    input_path = args.input
-    output_filename = input(
-        "Enter the desired output file name (without .pdf extension): ")
-    if output_filename.endswith('.pdf'):
-        output_filename = output_filename[:-4]
-
-    if args.output:
-        save_dir = os.path.expanduser(args.output)
-    else:
-        save_dir = os.path.expanduser("~/Downloads/WebPDFs")
-    os.makedirs(save_dir, exist_ok=True)
-
-    output_path = os.path.join(save_dir, f"{output_filename}.pdf")
-
-    save_to_pdf(input_path, output_path, wkhtmltopdf_path)
+    WebPDFConverter.check_url_connection(args.input)
+    output_path = WebPDFConverter.generate_output_path(args.input, args.output)
+    WebPDFConverter.convert_to_pdf(args.input, output_path)
+    print("\nHappy reading! \U0001F604")
 
 
 if __name__ == "__main__":
