@@ -1,6 +1,6 @@
 # WebPDF
 
-Sometimes, you come across a webpage that is so good you have to save it for later :) That's exactly why I created this script.
+Sometimes, you come across a webpage that is so good you have to save it for later :) Especially the docs! That's exactly why I created this script (wrapper for pdfkit :) ).
 
 WebPDF is a Python script that provides a simple interface to convert web pages or HTML files into PDF documents using the wkhtmltopdf library. This script allows users to easily generate PDFs from URLs or local HTML files with various configuration options.
 
@@ -18,7 +18,6 @@ WebPDF is a Python script that provides a simple interface to convert web pages 
 - Convert web pages to PDF using URLs.
 - Convert local HTML files to PDF.
 - Automatically checks for required dependencies (pdfkit and wkhtmltopdf).
-- Uses pipx for dependency installation if available.
 
 ## Dependencies
 
@@ -27,14 +26,8 @@ This script requires the following:
 - **pdfkit**: A Python wrapper for wkhtmltopdf that simplifies the process of generating PDFs.
 - **wkhtmltopdf**: A command-line tool to render HTML into PDF and other formats.
 
-You can install pdfkit via pipx (preferred) or pip:
-
 ```bash
-# Install via pipx
-pipx install pdfkit
-
-# Or install via pip
-pip install pdfkit
+sudo apt install python3-pdfkit
 ```
 
 Additionally, you need to have wkhtmltopdf installed on your system. You can install it using the following commands based on your operating system:
@@ -60,7 +53,7 @@ Download the installer from the wkhtmltopdf website and follow the installation 
 ### Step 1: Clone the Repository
 
 ```bash
-git clone <https://github.com/BarriosXJavier/WebPDF.git>
+git clone https://github.com/BarriosXJavier/WebPDF.git
 cd webpdf
 ```
 
@@ -74,7 +67,7 @@ chmod u+x webpdf.py
 
 ### Step 3: Install Dependencies
 
-Ensure you have installed pdfkit (using pipx or pip) and wkhtmltopdf as described in the Dependencies section.
+Ensure you have installed pdfkit and wkhtmltopdf as described in the Dependencies section.
 
 ## Add to PATH
 
@@ -146,7 +139,7 @@ python3 /path/to/webpdf.py [options] <url_or_html_file>
 ### Convert a URL to PDF
 
 ```bash
-webpdf <https://www.example.com>
+webpdf https://www.example.com
 ```
 
 ### Convert a Local HTML File to PDF
